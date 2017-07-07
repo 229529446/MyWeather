@@ -2,6 +2,10 @@ package com.example.administrator.myweather.Activity;
 
 import android.app.Activity;
 import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.os.Build;
+import android.support.annotation.NonNull;
+import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
@@ -45,6 +49,7 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.GregorianCalendar;
 import java.util.List;
+import java.util.jar.Manifest;
 
 public class WeatherActivity extends Activity {
 
@@ -89,6 +94,9 @@ public class WeatherActivity extends Activity {
     @ViewInject(R.id.add)
     private ImageButton add;
 
+    @ViewInject(R.id.local)
+    private ImageButton local;
+
 
 
     private List<future> futureList;
@@ -101,10 +109,78 @@ public class WeatherActivity extends Activity {
         x.view().inject(this);
 
 
-        city.setText(PrefUtil.getString(this,"City",""));
+
 
 
         String cityName = PrefUtil.getString(this, "City", "");
+        init(cityName);
+
+
+
+        add.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent intent = new Intent(WeatherActivity.this,SelectCityActivity.class);
+                intent.putExtra("weather",true);
+                startActivity(intent);
+                finish();
+
+            }
+        });
+
+
+        local.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (Build.VERSION.SDK_INT >= 23){
+
+                    if (ActivityCompat.checkSelfPermission(WeatherActivity.this, android.Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED){
+
+                        ActivityCompat.requestPermissions(WeatherActivity.this,new String[]{android.Manifest.permission.ACCESS_FINE_LOCATION},100);
+
+                    }else {
+                        new localUtils().showLocation(WeatherActivity.this, new localUtils.CallbackListener() {
+                            @Override
+                            public void onFinish(String response) {
+                                Toast.makeText(WeatherActivity.this,"当前城市为"+response,Toast.LENGTH_LONG).show();
+                                PrefUtil.setString(WeatherActivity.this,"City",response);
+                                init(response);
+                            }
+
+                            @Override
+                            public void onError(Throwable e) {
+                                Toast.makeText(WeatherActivity.this,"定位失败！",Toast.LENGTH_LONG).show();
+                            }
+                        });
+                    }
+
+
+                }else {
+                    new localUtils().showLocation(WeatherActivity.this, new localUtils.CallbackListener() {
+                        @Override
+                        public void onFinish(String response) {
+                            PrefUtil.setString(WeatherActivity.this,"City",response);
+                            Toast.makeText(WeatherActivity.this,"当前城市为"+response,Toast.LENGTH_LONG).show();
+                            init(response);
+                        }
+
+                        @Override
+                        public void onError(Throwable e) {
+                            Toast.makeText(WeatherActivity.this,"定位失败！",Toast.LENGTH_LONG).show();
+                        }
+                    });
+                }
+            }
+        });
+    }
+
+
+
+
+    public void init(String cityName){
+
+
+        city.setText(cityName);
 //        Toast.makeText(WeatherActivity.this,cityName,Toast.LENGTH_SHORT).show();
 
 
@@ -181,35 +257,36 @@ public class WeatherActivity extends Activity {
             }
         });
 
-
-
-        add.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-//                Intent intent = new Intent(WeatherActivity.this,SelectCityActivity.class);
-//                intent.putExtra("weather",true);
-//                startActivity(intent);
-//                finish();
-
-                new localUtils().showLocation(WeatherActivity.this, new localUtils.CallbackListener() {
-                    @Override
-                    public void onFinish(String response) {
-                        Toast.makeText(WeatherActivity.this,response,Toast.LENGTH_LONG).show();
-                    }
-
-                    @Override
-                    public void onError(Throwable e) {
-
-                    }
-                });
-
-            }
-        });
-
     }
 
 
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
 
+        switch (requestCode){
+            case 100:
+                if (grantResults[0] == PackageManager.PERMISSION_GRANTED){
 
+                    new localUtils().showLocation(WeatherActivity.this, new localUtils.CallbackListener() {
+                        @Override
+                        public void onFinish(String response) {
+                            Toast.makeText(WeatherActivity.this,"当前城市为"+response,Toast.LENGTH_LONG).show();
+                            PrefUtil.setString(WeatherActivity.this,"City",response);
+                            init(response);
+                        }
 
+                        @Override
+                        public void onError(Throwable e) {
+                            Toast.makeText(WeatherActivity.this,"定位失败！",Toast.LENGTH_LONG).show();
+                        }
+                    });
+
+                }else {
+                    Toast.makeText(WeatherActivity.this,"定位权限获取失败！",Toast.LENGTH_LONG).show();
+                }
+
+        }
+
+    }
 }

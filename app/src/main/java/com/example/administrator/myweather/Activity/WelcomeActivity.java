@@ -1,8 +1,13 @@
 package com.example.administrator.myweather.Activity;
 
+import android.Manifest;
 import android.app.Activity;
 import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.os.Build;
 import android.os.Handler;
+import android.support.annotation.NonNull;
+import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.text.LoginFilter;
@@ -13,11 +18,13 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.example.administrator.myweather.Application.MyApplication;
+import com.example.administrator.myweather.MainActivity;
 import com.example.administrator.myweather.R;
 import com.example.administrator.myweather.Url.ConnentUrl;
 import com.example.administrator.myweather.bean.City;
 import com.example.administrator.myweather.utils.PrefUtil;
 import com.example.administrator.myweather.utils.Utility;
+import com.example.administrator.myweather.utils.localUtils;
 
 import org.xutils.DbManager;
 import org.xutils.common.Callback;
@@ -54,12 +61,31 @@ public class WelcomeActivity extends Activity {
             "3403|台南,3404|台中,3405|桃园,3406|新竹,3407|宜兰,3408|澎湖,3409|嘉义,3410|花莲,3411|台东,3412|基隆";
 
 
+    private static final int BAIDU_READ_PHONE_STATE =100;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         requestWindowFeature(Window.FEATURE_NO_TITLE);
         setContentView(R.layout.activity_welcome);
+
+        if (Build.VERSION.SDK_INT>=23){
+            if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
+                    != PackageManager.PERMISSION_GRANTED) {
+//                Toast.makeText(getApplicationContext(),"没有权限,请手动开启定位权限",Toast.LENGTH_SHORT).show();
+                // 申请一个（或多个）权限，并提供用于回调返回的获取码（用户定义）
+                ActivityCompat.requestPermissions(WelcomeActivity.this,new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, BAIDU_READ_PHONE_STATE);
+            }else{
+                init();
+            }
+        }else{
+            init();
+        }
+
+    }
+
+
+    public void init(){
 
         new Handler().postDelayed(new Runnable() {
             @Override
@@ -68,30 +94,70 @@ public class WelcomeActivity extends Activity {
                 if (TextUtils.isEmpty(PrefUtil.getString(WelcomeActivity.this, "isFirst", ""))) {
 
                     Log.i("FFirst", "onCreate:第一次启动 ");
-                    PrefUtil.setString(WelcomeActivity.this,"isFirst","noFirst");
+                    PrefUtil.setString(WelcomeActivity.this, "isFirst", "noFirst");
                     try {
                         Utility.saveProvincesResponse(WelcomeActivity.this, result);
                         Utility.saveCitiesResponse(WelcomeActivity.this, city, "");
-
-                        Intent intent = new Intent(WelcomeActivity.this,SelectCityActivity.class);
-                        startActivity(intent);
-                        finish();
 
                     } catch (DbException e) {
                         e.printStackTrace();
                     }
 
+
+                    new localUtils().showLocation(WelcomeActivity.this, new localUtils.CallbackListener() {
+                        @Override
+                        public void onFinish(String response) {
+                            Toast.makeText(WelcomeActivity.this,response,Toast.LENGTH_LONG).show();
+                            PrefUtil.setString(WelcomeActivity.this,"City",response);
+                            Intent intent = new Intent(WelcomeActivity.this, WeatherActivity.class);
+                            startActivity(intent);
+                            finish();
+
+                        }
+
+                        @Override
+                        public void onError(Throwable e) {
+                            Toast.makeText(WelcomeActivity.this,"定位失败，请手动选择城市",Toast.LENGTH_LONG).show();
+                            Intent intent = new Intent(WelcomeActivity.this, SelectCityActivity.class);
+                            startActivity(intent);
+                            finish();
+                        }
+                    });
+
+                }else {
+                    Intent intent = new Intent(WelcomeActivity.this, WeatherActivity.class);
+                    startActivity(intent);
+                    finish();
                 }
 
-                Intent intent = new Intent(WelcomeActivity.this,SelectCityActivity.class);
-                startActivity(intent);
-                finish();
+
             }
-        },2000);
+        }, 2000);
 
 
+    }
 
-
-
+    //Android6.0申请权限的回调方法
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        switch (requestCode) {
+            // requestCode即所声明的权限获取码，在checkSelfPermission时传入
+            case BAIDU_READ_PHONE_STATE:
+                if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    Log.i("location_quanxian", "onRequestPermissionsResult:获取到权限");
+                    // 获取到权限，作相应处理（调用定位SDK应当确保相关权限均被授权，否则可能引起定位失败）
+                    init();
+                } else {
+                    // 没有获取到权限，做特殊处理
+                    Toast.makeText(WelcomeActivity.this,"获取位置权限失败，请手动选择城市",Toast.LENGTH_LONG).show();
+                    Intent intent = new Intent(WelcomeActivity.this, SelectCityActivity.class);
+                    startActivity(intent);
+                    finish();
+                }
+                break;
+            default:
+                break;
+        }
     }
 }
