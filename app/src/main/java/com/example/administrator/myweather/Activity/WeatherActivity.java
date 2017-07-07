@@ -22,6 +22,7 @@ import com.example.administrator.myweather.bean.sk;
 import com.example.administrator.myweather.bean.today;
 import com.example.administrator.myweather.bean.weatherBean;
 import com.example.administrator.myweather.utils.PrefUtil;
+import com.example.administrator.myweather.utils.localUtils;
 import com.example.administrator.myweather.view.RefreshListView;
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
@@ -185,10 +186,23 @@ public class WeatherActivity extends Activity {
         add.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Intent intent = new Intent(WeatherActivity.this,SelectCityActivity.class);
-                intent.putExtra("weather",true);
-                startActivity(intent);
-                finish();
+//                Intent intent = new Intent(WeatherActivity.this,SelectCityActivity.class);
+//                intent.putExtra("weather",true);
+//                startActivity(intent);
+//                finish();
+
+                new localUtils().showLocation(WeatherActivity.this, new localUtils.CallbackListener() {
+                    @Override
+                    public void onFinish(String response) {
+                        Toast.makeText(WeatherActivity.this,response,Toast.LENGTH_LONG).show();
+                    }
+
+                    @Override
+                    public void onError(Throwable e) {
+
+                    }
+                });
+
             }
         });
 

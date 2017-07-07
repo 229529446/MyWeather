@@ -12,4 +12,6 @@ public class ConnentUrl {
     public static final String PROVINCE = "http://www.weather.com.cn/data/list3/city.xml";
 
     public static final String CITY = "http://www.weather.com.cn/data/list3/";
+
+    public static final String LOCATION = "http://api.map.baidu.com/geocoder/v2/";
 }
